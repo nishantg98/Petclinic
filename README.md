@@ -218,7 +218,8 @@ verify_deployment:
 - **Purpose:** Verifies deployment by listing pods in the namespace.
 - **Tags:** Runs on a runner with the `self-hosted` tag.
 
-![1720536087962](https://github.com/user-attachments/assets/509241e3-340f-41d6-bd4f-79dbaea058f9)
+![Screenshot from 2024-08-11 22-19-14](https://github.com/user-attachments/assets/70b1db27-b687-437f-b2f3-6efaacc3e636)
+
 
 
 ##
