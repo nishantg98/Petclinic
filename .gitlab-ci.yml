@@ -1,0 +1,103 @@
+stages:
+  - setup
+  - test
+  - security
+  - build
+  - deploy
+
+install_required_tools:
+  stage: setup
+  script:
+    - sudo apt install openjdk-17-jre-headless -y
+    - sudo apt install maven -y
+    - sudo apt-get install wget apt-transport-https gnupg lsb-release
+    - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+    - echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+    - sudo apt-get update
+    - sudo apt-get install trivy
+    - sudo apt install docker.io -y && sudo chmod 666 /var/run/docker. sock
+    - sudo snap install kubectl --classic
+  tags:
+    - self-hosted
+
+execute_test_cases:
+  stage: test
+  script:
+   - mvn test
+  tags:
+   - self-hosted
+# For Node.js projects
+# For Maven projects
+
+perform_file_system_scan:
+  stage: security
+  script:
+   - trivy fs --format table -o fs.html .
+  tags:
+   - self-hosted
+
+sonarqube-check:
+  stage: security  
+  image: 
+    name: sonarsource/sonar-scanner-cli:latest
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script: 
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - main
+
+
+build_application_artifact:
+  stage: build
+  script:
+    - mvn  package
+  tags:
+    - self-hosted
+  only:
+    - main
+
+build_docker_image:
+  stage: build
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - mvn package  
+    - docker build -t nishantg98/petclinic:latest .
+  tags:
+    - self-hosted
+
+scan_docker_image:
+  stage: build
+  script:
+    - trivy image --format table -o trivy-image-report.html nishantg98/boardgame:latest 
+  tags:
+   - self-hosted
+
+push_to_docker_hub:
+  stage: build
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - docker push nishantg98/petclinic:latest
+  tags:
+   - self-hosted
+
+k8s-deploy:
+  stage: deploy 
+  variables:
+    KUBECONFIG_PATH: /home/ubuntu/.kube/config
+  before_script:
+    - mkdir -p $(dirname "$KUBECONFIG PATH")
+    - echo "$KUBECONFIG_CONTENT" | base64 -d > "$KUBECONFIG_PATH"
+    - export KUBECONFIG="$KUBECONFIG_ PATH" 
+  script:
+    - kubectl apply -f deployment-service.yml 
+  tags:
+    - self-hosted 
+  only: 
+      - main
