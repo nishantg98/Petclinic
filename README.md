@@ -65,7 +65,7 @@ perform_file_system_scan:
 ```
 
 **Explanation:**
-- **Stage Name:** `file_system_scan`, part of the `test` stage.
+- **Stage Name:** `file_system_scan`, part of the `security` stage.
 - **Purpose:** Runs Trivy to scan the project directory for vulnerabilities.
 - **Tags:** Runs on a runner with the `self-hosted` tag.
 
@@ -92,7 +92,7 @@ sonarqube-check:
 ```
 
 **Explanation:**
-- **Stage Name:** `code_quality_analysis`, part of the `test` stage.
+- **Stage Name:** `code_quality_analysis`, part of the `security` stage.
 - **Purpose:** Runs SonarQube's static analysis.
 - **Tags:** Runs on a runner with the `self-hosted` tag.
 
@@ -151,7 +151,7 @@ scan_docker_image:
 ```
 
 **Explanation:**
-- **Stage Name:** `scan_docker_image`, part of the `test` stage.
+- **Stage Name:** `scan_docker_image`, part of the `build` stage.
 - **Purpose:** Runs Trivy to scan the Docker image for vulnerabilities.
 - **Tags:** Runs on a runner with the `self-hosted` tag.
 
@@ -169,7 +169,7 @@ push_to_docker_hub:
 ```
 
 **Explanation:**
-- **Stage Name:** `push_to_docker_hub`, part of the `deploy` stage.
+- **Stage Name:** `push_to_docker_hub`, part of the `build` stage.
 - **Purpose:** Pushes the Docker image to Docker Hub.
 - **Tags:** Runs on a runner with the `self-hosted` tag.
 
