@@ -1,231 +1,224 @@
-# Spring PetClinic Sample Application  
-# Modified By DevOps Shack  https://www.youtube.com/@devopsshack
 
-[![Java CI with Maven](https://github.com/spring-petclinic/spring-framework-petclinic/actions/workflows/maven-build.yml/badge.svg)](https://github.com/spring-petclinic/spring-framework-petclinic/actions/workflows/maven-build.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=spring-petclinic_spring-framework-petclinic&metric=alert_status)](https://sonarcloud.io/dashboard?id=spring-petclinic_spring-framework-petclinic)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=spring-petclinic_spring-framework-petclinic&metric=coverage)](https://sonarcloud.io/dashboard?id=spring-petclinic_spring-framework-petclinic)
+# 🚀 Automated GitLab CI/CD Pipeline with Kubernetes
 
-This project allows the Spring community to maintain a Petclinic version with a plain old **Spring Framework configuration**
-and with a **3-layer architecture** (i.e. presentation --> service --> repository).
-The "canonical" implementation is now based on Spring Boot, Thymeleaf and [aggregate-oriented domain]([https://github.com/spring-projects/spring-petclinic/pull/200). 
+Welcome to the **Automated GitLab CI/CD Pipeline with Kubernetes** project, a robust and secure CI/CD pipeline implemented with GitLab and seamlessly integrated with Kubernetes. This pipeline is designed to automate the software development and deployment processes, ensuring efficiency, security, and scalability.
 
+## 🎓 Project Overview
+This project is inspired by real-time corporate GitLab CI/CD practices, as demonstrated in the **DevOps Shack** course. The pipeline follows a structured approach, with each stage focusing on specific tasks to streamline the development lifecycle. Below is a detailed breakdown of each stage:
 
-## Understanding the Spring Petclinic application with a few diagrams
-
-[See the presentation here](http://fr.slideshare.net/AntoineRey/spring-framework-petclinic-sample-application) (2017 update)
-
-## Running petclinic locally
-
-### With Maven command line
-```
-git clone https://github.com/spring-petclinic/spring-framework-petclinic.git
-cd spring-framework-petclinic
-./mvnw jetty:run-war
-# For Windows : ./mvnw.cmd jetty:run-war
-```
-
-### With Docker
-```
-docker run -p 8080:8080 springcommunity/spring-framework-petclinic
-```
-
-You can then access petclinic here: [http://localhost:8080/](http://localhost:8080/)
-
-<img width="1042" alt="petclinic-screenshot" src="https://cloud.githubusercontent.com/assets/838318/19727082/2aee6d6c-9b8e-11e6-81fe-e889a5ddfded.png">
-
-## In case you find a bug/suggested improvement for Spring Petclinic
-
-Our issue tracker is available here: https://github.com/spring-petclinic/spring-framework-petclinic/issues
+![1720536088673](https://github.com/user-attachments/assets/3502e07c-5575-4ef6-9c58-184a30c5dff4)
 
 
-## Database configuration
+### Stage 1: Install Required Tools
+The first stage ensures that all necessary tools are installed on the CI/CD server.
 
-In its default configuration, Petclinic uses an in-memory database (H2) which gets populated at startup with data.
-
-A similar setups is provided for MySQL and PostgreSQL in case a persistent database configuration is needed.
-To run petclinic locally using persistent database, it is needed to run with profile defined in main pom.xml file.
-
-For MySQL database, it is needed to run with 'MySQL' profile defined in main pom.xml file.
-
-```
-./mvnw jetty:run-war -P MySQL
+```yaml
+install_required_tools:
+  stage: setup
+  script:
+    - sudo apt install openjdk-17-jre-headless -y
+    - sudo apt install maven -y
+    - sudo apt-get install wget apt-transport-https gnupg lsb-release
+    - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+    - echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+    - sudo apt-get update
+    - sudo apt-get install trivy
+    - sudo apt install docker.io -y && sudo chmod 666 /var/run/docker. sock
+    - sudo snap install kubectl --classic
+  tags:
+    - self-hosted
 ```
 
-Before do this, would be good to check properties defined in MySQL profile inside pom.xml file.
+**Explanation:**
+- **Stage Name:** `install_tools`, part of the `setup` stage.
+- **Purpose:** Installs essential tools like JDK, Maven, trivy, docker, kubectl.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
 
-```
-<properties>
-    <jpa.database>MYSQL</jpa.database>
-    <jdbc.driverClassName>com.mysql.cj.jdbc.Driver</jdbc.driverClassName>
-    <jdbc.url>jdbc:mysql://localhost:3306/petclinic?useUnicode=true</jdbc.url>
-    <jdbc.username>petclinic</jdbc.username>
-    <jdbc.password>petclinic</jdbc.password>
-</properties>
-```      
 
-You could start MySQL locally with whatever installer works for your OS, or with docker:
+### Stage 2: Execute Test Cases
+This stage involves running automated tests to validate the functionality of the code.
 
-```
-docker run -e MYSQL_USER=petclinic -e MYSQL_PASSWORD=petclinic -e MYSQL_ROOT_PASSWORD=root -e MYSQL_DATABASE=petclinic -p 3306:3306 mysql:5.7.8
-```
-
-For PostgreSQL database, it is needed to run with 'PostgreSQL' profile defined in main pom.xml file.
-
-```
-./mvnw jetty:run-war -P PostgreSQL
+```yaml
+execute_test_cases:
+  stage: test
+  script:
+   - mvn test
+  tags:
+   - self-hosted
 ```
 
-Before do this, would be good to check properties defined in PostgreSQL profile inside pom.xml file.
+**Explanation:**
+- **Stage Name:** `test`, part of the `test` stage.
+- **Purpose:** Executes test cases using `Maven`.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
 
-```
-<properties>
-    <jpa.database>POSTGRESQL</jpa.database>
-    <jdbc.driverClassName>org.postgresql.Driver</jdbc.driverClassName>
-    <jdbc.url>jdbc:postgresql://localhost:5432/petclinic</jdbc.url>
-    <jdbc.username>postgres</jdbc.username>
-    <jdbc.password>petclinic</jdbc.password>
-</properties>
-```
-You could also start PostgreSQL locally with whatever installer works for your OS, or with docker:
+### Stage 3: Perform File System Scan (Trivy)
+In this stage, project files are scanned for vulnerabilities using Trivy.
 
-```
-docker run --name postgres-petclinic -e POSTGRES_PASSWORD=petclinic -e POSTGRES_DB=petclinic -p 5432:5432 -d postgres:9.6.0
-```
-
-## Persistence layer choice
-
-The persistence layer have 3 available implementations: JPA (default), JDBC and Spring Data JPA.
-The default JPA implementation could be changed by using a Spring profile: `jdbc`, `spring-data-jpa` and `jpa`.  
-As an example, you may use the `-Dspring.profiles.active=jdbc` VM options to start the application with the JDBC implementation.
-
-```
-./mvnw jetty:run-war -Dspring.profiles.active=jdbc
+```yaml
+perform_file_system_scan:
+  stage: security
+  script:
+   - trivy fs --format table -o fs.html .
+  tags:
+   - self-hosted
 ```
 
+**Explanation:**
+- **Stage Name:** `file_system_scan`, part of the `test` stage.
+- **Purpose:** Runs Trivy to scan the project directory for vulnerabilities.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
 
-## Working with Petclinic in your IDE
+### Stage 4: Evaluate Code Quality (SonarQube)
+This stage involves evaluating code quality using SonarQube's static analysis.
 
-### Prerequisites
-The following items should be installed in your system:
-* Java 8 or newer (full JDK not a JRE)
-* Maven 3.3+ (http://maven.apache.org/install.html)
-* git command line tool (https://help.github.com/articles/set-up-git)
-* Jetty 9.4+ or Tomcat 9+
-* Your prefered IDE 
-  * Eclipse with the m2e plugin. Note: when m2e is available, there is an m2 icon in Help -> About dialog. If m2e is not there, just follow the install process here: http://www.eclipse.org/m2e/
-  * [Spring Tools Suite](https://spring.io/tools) (STS)
-  * IntelliJ IDEA
-
-
-### Steps:
-
-1) On the command line
-```
-git clone https://github.com/spring-petclinic/spring-framework-petclinic.git
-```
-
-2) Inside Eclipse or STS
-```
-File -> Import -> Maven -> Existing Maven project
-```
-Then either build on the command line `./mvnw generate-resources` or using the Eclipse launcher (right click on project and `Run As -> Maven install`) to generate the CSS.
-Configure a Jetty or a Tomcat web container then deploy the `spring-petclinic.war` file.
-
-3) Inside IntelliJ IDEA
-
-In the main menu, select `File > Open` and select the Petclinic [pom.xml](pom.xml). Click on the `Open` button.
-
-CSS files are generated from the Maven build. You can either build them on the command line `./mvnw generate-resources` 
-or right click on the `spring-petclinic` project then `Maven -> Generates sources and Update Folders`.
-
-Go to the `Run -> Edit Configuration` then configure a Tomcat or a Jetty web container. Deploy the `spring-petclinic.war` file.
-Run the application by clicking on the `Run` icon.
-
-
-4) Navigate to Petclinic
-
-Visit [http://localhost:8080](http://localhost:8080) in your browser.
-
-
-## Working with Petclinic in IntelliJ IDEA
-
-### prerequisites
-The following items should be installed in your system:
-
-
-## Looking for something in particular?
-
-| Java Config |   |
-|-------------|---|
-| Java config branch | Petclinic uses XML configuration by default. In case you'd like to use Java Config instead, there is a Java Config branch available [here](https://github.com/spring-petclinic/spring-framework-petclinic/tree/javaconfig) |
-
-| Inside the 'Web' layer | Files |
-|------------------------|-------|
-| Spring MVC - XML integration | [mvc-view-config.xml](src/main/resources/spring/mvc-view-config.xml)  |
-| Spring MVC - ContentNegotiatingViewResolver| [mvc-view-config.xml](src/main/resources/spring/mvc-view-config.xml) |
-| JSP custom tags | [WEB-INF/tags](src/main/webapp/WEB-INF/tags), [createOrUpdateOwnerForm.jsp](src/main/webapp/WEB-INF/jsp/owners/createOrUpdateOwnerForm.jsp)|
-| JavaScript dependencies | [JavaScript libraries are declared as webjars in the pom.xml](pom.xml) |
-| Static resources config | [Resource mapping in Spring configuration](/src/main/resources/spring/mvc-core-config.xml#L30) |
-| Static resources usage | [htmlHeader.tag](src/main/webapp/WEB-INF/tags/htmlHeader.tag), [footer.tag](src/main/webapp/WEB-INF/tags/footer.tag) |
-| Thymeleaf | In the late 2016, the original [Spring Petclinic](https://github.com/spring-projects/spring-petclinic) has moved from JSP to Thymeleaf. |
-
-| 'Service' and 'Repository' layers | Files |
-|-----------------------------------|-------|
-| Transactions | [business-config.xml](src/main/resources/spring/business-config.xml), [ClinicServiceImpl.java](src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java) |
-| Cache | [tools-config.xml](src/main/resources/spring/tools-config.xml), [ClinicServiceImpl.java](src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java) |
-| Bean Profiles | [business-config.xml](src/main/resources/spring/business-config.xml), [ClinicServiceJdbcTests.java](src/test/java/org/springframework/samples/petclinic/service/ClinicServiceJdbcTests.java), [PetclinicInitializer.java](src/main/java/org/springframework/samples/petclinic/PetclinicInitializer.java) |
-| JDBC | [business-config.xml](src/main/resources/spring/business-config.xml), [jdbc folder](src/main/java/org/springframework/samples/petclinic/repository/jdb) |
-| JPA | [business-config.xml](src/main/resources/spring/business-config.xml), [jpa folder](src/main/java/org/springframework/samples/petclinic/repository/jpa) |
-| Spring Data JPA | [business-config.xml](src/main/resources/spring/business-config.xml), [springdatajpa folder](src/main/java/org/springframework/samples/petclinic/repository/springdatajpa) |
-
-
-## Publishing a Docker image
-
-This application uses [Google Jib]([https://github.com/GoogleContainerTools/jib) to build an optimized Docker image
-into the [Docker Hub](https://cloud.docker.com/u/springcommunity/repository/docker/springcommunity/spring-framework-petclinic/)
-repository.
-The [pom.xml](pom.xml) has been configured to publish the image with a the `springcommunity/spring-framework-petclinic` image name.
-
-Jib containerizes this WAR project by using the [distroless Jetty](https://github.com/GoogleContainerTools/distroless/tree/master/java/jetty) as a base image.
-
-Build and push the container image of Petclinic to the Docker Hub registry:
-```
-mvn jib:build
+```yaml
+sonarqube-check:
+  stage: security  
+  image: 
+    name: sonarsource/sonar-scanner-cli:latest
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script: 
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - main
 ```
 
+**Explanation:**
+- **Stage Name:** `code_quality_analysis`, part of the `test` stage.
+- **Purpose:** Runs SonarQube's static analysis.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
 
-## Interesting Spring Petclinic forks
-
-The Spring Petclinic master branch in the main [spring-projects](https://github.com/spring-projects/spring-petclinic)
-GitHub org is the "canonical" implementation, currently based on Spring Boot and Thymeleaf.
-
-This [spring-framework-petclinic](https://github.com/spring-petclinic/spring-framework-petclinic) project is one of the [several forks](https://spring-petclinic.github.io/docs/forks.html) 
-hosted in a special GitHub org: [spring-petclinic](https://github.com/spring-petclinic).
-If you have a special interest in a different technology stack
-that could be used to implement the Pet Clinic then please join the community there.
+![Screenshot from 2024-08-11 17-45-41](https://github.com/user-attachments/assets/5a6eb2e1-78e4-4216-af46-6e9def40f44f)
 
 
-## Interaction with other open source projects
+### Stage 5: Build Application Artifact
+This stage involves compiling and packaging the application into an executable artifact.
 
-One of the best parts about working on the Spring Petclinic application is that we have the opportunity to work in direct contact with many Open Source projects. We found some bugs/suggested improvements on various topics such as Spring, Spring Data, Bean Validation and even Eclipse! In many cases, they've been fixed/implemented in just a few days.
-Here is a list of them:
+```yaml
+build_application_artifact:
+  stage: build
+  script:
+    - mvn  package
+  tags:
+    - self-hosted
+  only:
+    - main
+```
 
-| Name | Issue |
-|------|-------|
-| Spring JDBC: simplify usage of NamedParameterJdbcTemplate | [SPR-10256](https://jira.springsource.org/browse/SPR-10256) and [SPR-10257](https://jira.springsource.org/browse/SPR-10257) |
-| Bean Validation / Hibernate Validator: simplify Maven dependencies and backward compatibility |[HV-790](https://hibernate.atlassian.net/browse/HV-790) and [HV-792](https://hibernate.atlassian.net/browse/HV-792) |
-| Spring Data: provide more flexibility when working with JPQL queries | [DATAJPA-292](https://jira.springsource.org/browse/DATAJPA-292) |
-| Dandelion: improves the DandelionFilter for Jetty support | [113](https://github.com/dandelion/dandelion/issues/113) |
-
-
-# Contributing
-
-Approved by the Spring team, this repo is a fork of the [spring-projects/spring-petclinic](https://github.com/spring-projects/spring-petclinic).
-
-The [issue tracker](/issues) is the preferred channel for bug reports, features requests and submitting pull requests.
-
-For pull requests, editor preferences are available in the [editor config](.editorconfig) for easy use in common text editors. Read more and download plugins at <http://editorconfig.org>.
+**Explanation:**
+- **Stage Name:** `build_artifact`, part of the `build` stage.
+- **Purpose:** Packages the application using Maven.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
 
 
+### Stage 6: Build Docker Image
+This stage creates a Docker image for containerized deployment.
+
+```yaml
+build_docker_image:
+  stage: build
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - mvn package  
+    - docker build -t nishantg98/petclinic:latest .
+  tags:
+    - self-hosted
+```
+
+**Explanation:**
+- **Stage Name:** `build_docker_image`, part of the `build` stage.
+- **Purpose:** Builds a Docker image using the Dockerfile.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
+
+### Stage 7: Scan Docker Image for Security Vulnerabilities (Trivy)
+This stage checks the Docker image for security vulnerabilities using Trivy.
+
+```yaml
+scan_docker_image:
+  stage: build
+  script:
+    - trivy image --format table -o trivy-image-report.html nishantg98/boardgame:latest 
+  tags:
+   - self-hosted
+```
+
+**Explanation:**
+- **Stage Name:** `scan_docker_image`, part of the `test` stage.
+- **Purpose:** Runs Trivy to scan the Docker image for vulnerabilities.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
+
+### Stage 8: Push Docker Image to Docker Hub
+This stage uploads the Docker image to Docker Hub for distribution.
+
+```yaml
+push_to_docker_hub:
+  stage: build
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASS
+    - docker push nishantg98/petclinic:latest
+  tags:
+   - self-hosted
+```
+
+**Explanation:**
+- **Stage Name:** `push_to_docker_hub`, part of the `deploy` stage.
+- **Purpose:** Pushes the Docker image to Docker Hub.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
+
+### Stage 9: Deploy Application to Kubernetes Cluster
+This stage deploys the application to a Kubernetes cluster for orchestration.
+
+```yaml
+k8s-deploy:
+  stage: deploy 
+  variables:
+    KUBECONFIG_PATH: /home/ubuntu/.kube/config
+  before_script:
+    - mkdir -p $(dirname "$KUBECONFIG PATH")
+    - echo "$KUBECONFIG_CONTENT" | base64 -d > "$KUBECONFIG_PATH"
+    - export KUBECONFIG="$KUBECONFIG_PATH" 
+  script:
+    - kubectl apply -f deployment-service.yml 
+  tags:
+    - self-hosted 
+  only: 
+      - main
+```
+
+**Explanation:**
+- **Stage Name:** `deploy_to_kubernetes`, part of the `deploy` stage.
+- **Purpose:** Applies Kubernetes manifest files to deploy the application.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
+
+![Screenshot from 2024-08-11 19-22-01](https://github.com/user-attachments/assets/788b90cc-fa1b-4be3-bf05-d16e52169e09)
 
 
+### Stage 10: Verify Deployment
+Here, the successful deployment of the application is confirmed.
+
+```yaml
+verify_deployment:
+  stage: deploy
+  script:
+    - kubectl get pods --namespace your_namespace
+  tags:
+    - kubernetes
+```
+
+**Explanation:**
+- **Stage Name:** `verify_deployment`, part of the `deploy` stage.
+- **Purpose:** Verifies deployment by listing pods in the namespace.
+- **Tags:** Runs on a runner with the `self-hosted` tag.
+
+![1720536087962](https://github.com/user-attachments/assets/509241e3-340f-41d6-bd4f-79dbaea058f9)
+
+
+##
